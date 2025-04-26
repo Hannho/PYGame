@@ -23,11 +23,8 @@ class BattleApp:
     def __init__(self, root):
         self.root = root
         self.root.title("角色戰鬥模擬器")
-        self.root.geometry("1400x900")  # 視窗大小可以自訂，例如 1400x900
-        self.root.resizable(True, True)  # 允許使用者縮放視窗
-
-        self.screen_width = self.root.winfo_screenwidth()
-        self.screen_height = self.root.winfo_screenheight()
+        self.root.geometry("1400x900")
+        self.root.resizable(True, True)
 
         self.characters = []
         self.setup_characters()
@@ -40,23 +37,24 @@ class BattleApp:
         self.set_background("C:/Users/bingh/Desktop/包裝/background.jpg")
         self.setup_styles()
         self.create_widgets()
-
-        self.root.bind("<Configure>", self.on_resize)
+    
+        self.root.bind("<Configure>", self.resize_background)
 
     def set_background(self, path):
         if os.path.exists(path):
-            self.bg_image_raw = Image.open(path)
-            bg_resized = self.bg_image_raw.resize((self.screen_width, self.screen_height))
+            self.bg_image_raw = Image.open(path)  # 原始大圖
+            w, h = self.root.winfo_width(), self.root.winfo_height()
+            bg_resized = self.bg_image_raw.resize((w, h))
             self.bg_image = ImageTk.PhotoImage(bg_resized)
             self.bg_label = tk.Label(self.root, image=self.bg_image)
             self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
 
-    def setup_styles(self):
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("TButton", font=("Helvetica", 20), padding=12)
-        style.configure("TLabel", background="#ffffff", font=("Helvetica", 20))
-        style.configure("red.Horizontal.TProgressbar", foreground="red", background="red", thickness=14)
+    def resize_background(self, event):
+        if hasattr(self, "bg_image_raw"):
+            w, h = event.width, event.height
+            bg_resized = self.bg_image_raw.resize((w, h))
+            self.bg_image = ImageTk.PhotoImage(bg_resized)
+            self.bg_label.configure(image=self.bg_image)
 
     def setup_characters(self):
         stats = {
@@ -75,31 +73,111 @@ class BattleApp:
         self.turn_order = sorted(self.characters, key=lambda c: -c.speed)
         self.current_turn_index = 0
 
+    def setup_styles(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TButton", font=("Helvetica", 20), padding=12)
+        style.configure("TLabel", background="#ffffff", font=("Helvetica", 20))
+        style.configure("red.Horizontal.TProgressbar", foreground="red", background="red", thickness=14)
+    
     def create_widgets(self):
-        padding = 40
+        # 整個畫面分成上中下三個區塊
+        self.top_frame = tk.Frame(self.root, bg="#ffffff")
+        self.top_frame.pack(pady=20)
 
-        ttk.Label(self.root, text="攻擊者").place(x=padding, y=10)
-        self.attacker_menu = ttk.OptionMenu(self.root, self.attacker_var, None, *[c.name for c in self.characters])
+        self.middle_frame = tk.Frame(self.root, bg="#ffffff")
+        self.middle_frame.pack(pady=20)
 
-        ttk.Label(self.root, text="目標").place(x=self.screen_width - 300, y=10)
-        self.defender_menu = ttk.OptionMenu(self.root, self.defender_var, None, *[c.name for c in self.characters])
+        self.bottom_frame = tk.Frame(self.root, bg="#ffffff")
+        self.bottom_frame.pack(pady=10)
 
-        self.attack_button = ttk.Button(self.root, text="⚔️ 攻擊", command=self.attack)
+        # --- 上方：攻擊方、按鈕、防守方 ---
+        self.attacker_img = tk.Label(self.top_frame, bg="#ffffff")
+        self.attacker_img.grid(row=0, column=0, padx=40)
 
-        self.attacker_img = tk.Label(self.root, bg="#ffffff")
-        self.attacker_bar = ttk.Progressbar(self.root, style="red.Horizontal.TProgressbar")
-        self.attacker_stats = tk.Label(self.root, bg="#ffffff", font=("Helvetica", 18), justify="left")
+        self.attack_button = ttk.Button(self.top_frame, text="⚔️ 攻擊", command=self.attack)
+        self.attack_button.grid(row=0, column=1, padx=40)
 
-        self.defender_img = tk.Label(self.root, bg="#ffffff")
-        self.defender_bar = ttk.Progressbar(self.root, style="red.Horizontal.TProgressbar")
-        self.defender_stats = tk.Label(self.root, bg="#ffffff", font=("Helvetica", 18), justify="left")
+        self.defender_img = tk.Label(self.top_frame, bg="#ffffff")
+        self.defender_img.grid(row=0, column=2, padx=40)
 
-        self.status_label = tk.Label(self.root, bg="#ffffff", font=("Helvetica", 18), justify="left", anchor="nw")
-        self.log = tk.Text(self.root, height=12, width=110, font=("Courier", 16), bg="#fbfbfd")
+        # --- 上方：血條和數值 ---
+        self.attacker_bar = ttk.Progressbar(self.top_frame, style="red.Horizontal.TProgressbar", length=200)
+        self.attacker_bar.grid(row=1, column=0, pady=5)
+
+        self.defender_bar = ttk.Progressbar(self.top_frame, style="red.Horizontal.TProgressbar", length=200)
+        self.defender_bar.grid(row=1, column=2, pady=5)
+
+        self.attacker_stats = tk.Label(self.top_frame, bg="#ffffff", font=("Helvetica", 14))
+        self.attacker_stats.grid(row=2, column=0, pady=5)
+
+        self.defender_stats = tk.Label(self.top_frame, bg="#ffffff", font=("Helvetica", 14))
+        self.defender_stats.grid(row=2, column=2, pady=5)
+
+        # --- 中間：攻擊方角色列 ---
+        tk.Label(self.middle_frame, text="選擇攻擊方", bg="#e0f7fa", font=("Helvetica", 16)).pack(pady=5)
+        self.attacker_selection_frame = tk.Frame(self.middle_frame, bg="#e0f7fa")
+        self.attacker_selection_frame.pack(pady=10)
+
+        # --- 中間：防守方角色列 ---
+        tk.Label(self.middle_frame, text="選擇防守方", bg="#ffebee", font=("Helvetica", 16)).pack(pady=20)
+        self.defender_selection_frame = tk.Frame(self.middle_frame, bg="#ffebee")
+        self.defender_selection_frame.pack(pady=10)
+
+        # --- 下方：狀態版和戰鬥紀錄 ---
+        self.status_label = tk.Label(self.bottom_frame, bg="#ffffff", font=("Courier", 14), justify="left")
+        self.status_label.pack(pady=10)
+
+        self.log = tk.Text(self.bottom_frame, height=10, width=100, font=("Courier", 12), bg="#f5f5f5")
+        self.log.pack()
 
         self.update_status_board()
         self.attacker_var.set(self.turn_order[self.current_turn_index].name)
 
+        self.create_attack_selection()
+        self.create_defend_selection()
+
+    def create_attack_selection(self):
+        for widget in self.attacker_selection_frame.winfo_children():
+            widget.destroy()
+
+        max_cols = 6
+        for idx, char in enumerate(self.characters):
+            img = Image.open(char.image_path).resize((100, 100))
+            if not char.is_alive():
+                img = img.convert("LA")
+            img = self.make_rounded(img, 20)
+            photo = ImageTk.PhotoImage(img)
+
+            btn = tk.Button(self.attacker_selection_frame, image=photo, command=lambda c=char: self.set_attacker(c))
+            btn.image = photo
+            btn.grid(row=idx // max_cols, column=idx % max_cols, padx=5, pady=5)
+
+    def create_defend_selection(self):
+        for widget in self.defender_selection_frame.winfo_children():
+            widget.destroy()
+
+        max_cols = 6
+        for idx, char in enumerate(self.characters):
+            img = Image.open(char.image_path).resize((100, 100))
+            if not char.is_alive():
+                img = img.convert("LA")
+            img = self.make_rounded(img, 20)
+            photo = ImageTk.PhotoImage(img)
+
+            btn = tk.Button(self.defender_selection_frame, image=photo, command=lambda c=char: self.set_defender(c))
+            btn.image = photo
+            btn.grid(row=idx // max_cols, column=idx % max_cols, padx=5, pady=5)
+
+    def set_attacker(self, char):
+        if char.is_alive():
+            self.attacker_var.set(char.name)
+            self.update_attacker_display()
+
+    def set_defender(self, char):
+        if char.is_alive():
+            self.defender_var.set(char.name)
+            self.update_defender_display()
 
     def update_attacker_display(self, *args):
         self.update_character_display(self.attacker_var.get(), self.attacker_img, self.attacker_bar, self.attacker_stats)
@@ -110,16 +188,19 @@ class BattleApp:
     def update_character_display(self, name, image_label, health_bar, stats_label):
         char = next((c for c in self.characters if c.name == name), None)
         if char and os.path.exists(char.image_path):
-            img = Image.open(char.image_path).resize((250, 250))
+            img = Image.open(char.image_path).resize((200, 200))
+            if not char.is_alive():
+                img = img.convert("LA")
             rounded = self.make_rounded(img, 40)
             photo = ImageTk.PhotoImage(rounded)
             image_label.configure(image=photo)
             image_label.image = photo
-        percent = int((char.hp / char.max_hp) * 100)
-        self.animate_health_bar(health_bar, percent)
-        stats_label.config(
-            text=f"HP: {char.hp}/{char.max_hp}\nATK: {char.atk}\nDEF: {char.defense}\nSPD: {char.speed}"
-        )
+        if char:
+            percent = int((char.hp / char.max_hp) * 100)
+            self.animate_health_bar(health_bar, percent)
+            stats_label.config(
+                text=f"HP: {char.hp}/{char.max_hp}\nATK: {char.atk}\nDEF: {char.defense}\nSPD: {char.speed}"
+            )
 
     def animate_health_bar(self, bar, target_value):
         current_value = bar["value"]
@@ -182,6 +263,9 @@ class BattleApp:
         self.update_defender_display()
         self.update_status_board()
 
+        self.create_attack_selection()
+        self.create_defend_selection()
+
         if all(not c.is_alive() or c == attacker for c in self.characters):
             self.log.insert(tk.END, f"\n🏆 {attacker.name} 是最後的勝利者！\n")
             return
@@ -195,44 +279,8 @@ class BattleApp:
             if next_char.is_alive():
                 self.attacker_var.set(next_char.name)
                 break
-            
-    def on_resize(self, event):
-        w = event.width
-        h = event.height
-
-        padding = 40
-        img_size = int(min(w, h) * 0.15)  # 角色圖大小隨畫面比例
-
-        # 攻擊者
-        self.attacker_img.place(x=padding, y=padding, width=img_size, height=img_size)
-        self.attacker_bar.place(x=padding, y=padding + img_size + 10, width=img_size)
-        self.attacker_stats.place(x=padding, y=padding + img_size + 30)
-
-        # 防守者
-        self.defender_img.place(x=w - img_size - padding, y=padding, width=img_size, height=img_size)
-        self.defender_bar.place(x=w - img_size - padding, y=padding + img_size + 10, width=img_size)
-        self.defender_stats.place(x=w - img_size - padding, y=padding + img_size + 30)
-
-        # 選單和按鈕
-        self.attacker_menu.place(x=padding + 160, y=10)
-        self.defender_menu.place(x=w - 200, y=10)
-        self.attack_button.place(x=w // 2 - 60, y=50)
-
-        # 狀態欄
-        self.status_label.place(x=w // 2 - 300, y=h - 480)
-
-        # 戰鬥紀錄 log
-        self.log.place(x=w // 2 - 450, y=h - 300)
-
-        # 背景圖大小也重新設定
-        if hasattr(self, "bg_image_raw"):
-            bg_resized = self.bg_image_raw.resize((w, h))
-            self.bg_image = ImageTk.PhotoImage(bg_resized)
-            self.bg_label.configure(image=self.bg_image)
-
 
 if __name__ == "__main__":
     root = tk.Tk()
     app = BattleApp(root)
     root.mainloop()
-
