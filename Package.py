@@ -34,7 +34,7 @@ class BattleApp:
         self.attacker_var.trace("w", self.update_attacker_display)
         self.defender_var.trace("w", self.update_defender_display)
 
-        self.set_background("C:/Users/bingh/Desktop/包裝/background.jpg")
+        self.set_background("background.jpg")
         self.setup_styles()
         self.create_widgets()
     
@@ -67,7 +67,7 @@ class BattleApp:
         }
 
         for name, (hp, atk, defense, speed) in stats.items():
-            path = f"C:/Users/bingh/Desktop/包裝/{name}.jpeg"
+            path = f"{name}.jpeg"
             self.characters.append(Character(name, hp, atk, defense, speed, image_path=path))
 
         self.turn_order = sorted(self.characters, key=lambda c: -c.speed)
