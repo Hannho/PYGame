@@ -4,7 +4,8 @@ from PIL import Image, ImageTk, ImageDraw
 import os
 
 class Character:
-    def __init__(self, name, hp, atk, defense, speed, image_path=None):
+    def __init__(self,title, name, hp, atk, defense, speed, image_path=None):
+        self.title = title
         self.name = name
         self.max_hp = hp
         self.hp = hp
@@ -58,17 +59,17 @@ class BattleApp:
 
     def setup_characters(self):
         stats = {
-            "海盜": (100, 30, 10, 15),
-            "法師": (80, 40, 5, 25),
-            "弓箭手": (90, 25, 8, 30),
-            "精靈": (85, 35, 6, 35),
-            "騎士": (110, 20, 15, 10),
-            "獵人": (95, 15, 12, 20)
+            "海盜": ("pirate",100, 30, 10, 15),
+            "法師": ("mage",80, 40, 5, 25),
+            "弓箭手": ("bow", 90, 25, 8, 30),
+            "精靈": ("Elf", 85, 35, 6, 35),
+            "騎士": ("knight", 110, 20, 15, 10),
+            "獵人": ("hunter", 95, 15, 12, 20)
         }
 
-        for name, (hp, atk, defense, speed) in stats.items():
+        for title ,(name,hp, atk, defense, speed) in stats.items():
             path = f"{name}.jpeg"
-            self.characters.append(Character(name, hp, atk, defense, speed, image_path=path))
+            self.characters.append(Character(title,name, hp, atk, defense, speed, image_path=path))
 
         self.turn_order = sorted(self.characters, key=lambda c: -c.speed)
         self.current_turn_index = 0
